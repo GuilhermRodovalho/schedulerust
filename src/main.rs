@@ -107,5 +107,8 @@ fn associate_slots_to_activities_recursive(
         return [].to_vec();
     }
 
+    // traverse all the activities, and remove the respective slots and the activity that
+    // will use those slots
+
     vec![]
 }
