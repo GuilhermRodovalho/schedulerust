@@ -1,4 +1,4 @@
-use std::vec;
+use std::{result, vec};
 
 #[derive(Debug, Clone)]
 enum SlotState {
@@ -16,6 +16,11 @@ struct Slot {
 struct Activity {
     name: String,
     slot_to_use: Vec<Option<Box<Slot>>>,
+}
+
+#[derive(Debug, Clone)]
+struct Schedule {
+    activities: Vec<Activity>,
 }
 
 impl Slot {
@@ -69,46 +74,53 @@ fn main() {
         Activity::new_with_slots("resolucao", vec![&slots[10]]),
     ];
 
-    let res = associate_slots_to_activities(slots.to_vec(), activities);
+    // let res = associate_slots_to_activities(slots.to_vec(), activities);
 
-    println!("{:?}", res);
-}
+    let res = get_activity_permutations(&activities);
 
-/// Returns all possible combinations of schedules that can be produced with the given slots and activities.
-///
-/// This is a recursive function that associates slots with activities, such that each activity is assigned
-/// to one or more slots, and no two activities are assigned to the same slot. The result is a vector of activities
-/// where each activity has a `slot_to_use` field indicating which slots it is associated with.
-///
-/// # Arguments
-///
-/// * `slots` - A vector of `Slot` objects representing the available time slots.
-/// * `activities` - A vector of `Activity` objects representing the activities to be scheduled.
-///
-/// # Returns
-///
-/// A vector of `Activity` objects, each with a `slot_to_use` field indicating which slots it is associated with.
-fn associate_slots_to_activities(slots: Vec<Slot>, activities: Vec<Activity>) -> Vec<Activity> {
-    let mut slots = slots
-        .into_iter()
-        .map(|slot| Some(Box::new(slot)))
-        .collect::<Vec<Option<Box<Slot>>>>();
-
-    let result = associate_slots_to_activities_recursive(&mut slots, activities);
-
-    result
-}
-
-fn associate_slots_to_activities_recursive(
-    slots: &mut Vec<Option<Box<Slot>>>,
-    activities: Vec<Activity>,
-) -> Vec<Activity> {
-    if slots.is_empty() || activities.is_empty() {
-        return [].to_vec();
+    for (i, schedule) in res.iter().enumerate() {
+        // print!("----------------------------------------------------\n");
+        // println!("Schedule N{}", i + 1);
+        // for activity in schedule {
+        //     print!("{}, ", activity.name);
+        // }
+        // println!();
     }
 
-    // traverse all the activities, and remove the respective slots and the activity that
-    // will use those slots
+    // println!("{:?}", res);
+}
 
-    vec![]
+fn permutations(items: &mut Vec<usize>) -> Vec<Vec<usize>> {
+    if items.is_empty() {
+        vec![vec![]]
+    } else {
+        let mut result = vec![];
+        for i in 0..items.len() {
+            let item = items.remove(i);
+            let sub_permutations = permutations(items);
+            for mut perm in sub_permutations {
+                perm.insert(0, item.clone());
+                result.push(perm);
+            }
+            items.insert(i, item);
+        }
+        result
+    }
+}
+
+fn get_activity_permutations(activities: &[Activity]) -> Vec<Vec<Activity>> {
+    let mut activity_permutations = vec![];
+    let mut activity_indexes = (0..activities.len()).collect::<Vec<usize>>();
+    let index_permutations = permutations(&mut activity_indexes);
+
+    println!("Permutations {:?}", index_permutations);
+
+    for index_permutation in index_permutations {
+        let mut activity_permutation = vec![];
+        for activity_index in index_permutation {
+            activity_permutation.push(activities[activity_index].clone());
+        }
+        activity_permutations.push(activity_permutation);
+    }
+    activity_permutations
 }
