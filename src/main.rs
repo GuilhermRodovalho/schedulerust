@@ -1,55 +1,78 @@
-use std::{fmt::Debug, vec};
+use std::{collections::HashSet, fmt::Debug, vec};
 
-#[derive(Debug, Clone)]
-enum SlotState {
-    Free,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 struct Slot {
     name: String,
-    state: SlotState,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 struct Activity {
     name: String,
     slots_to_use: Vec<Slot>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 struct Schedule {
     activities: Vec<Activity>,
 }
 
 impl Slot {
     fn new(name: &str) -> Self {
-        Self {
-            name: name.into(),
-            state: SlotState::Free,
-        }
-    }
-}
-
-impl PartialEq for SlotState {
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
-    }
-
-    fn eq(&self, other: &Self) -> bool {
-        core::mem::discriminant(self) == core::mem::discriminant(other)
+        Self { name: name.into() }
     }
 }
 
 impl PartialEq for Slot {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.state == other.state
+        self.name == other.name
     }
 
     fn ne(&self, other: &Self) -> bool {
         !self.eq(other)
     }
 }
+
+impl PartialEq for Activity {
+    fn eq(&self, other: &Self) -> bool {
+        if self.name != other.name {
+            return false;
+        }
+
+        for this_slot in &self.slots_to_use {
+            if !other.slots_to_use.contains(&this_slot) {
+                return false;
+            }
+        }
+
+        for other_slot in &other.slots_to_use {
+            if !self.slots_to_use.contains(&other_slot) {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl PartialEq for Schedule {
+    fn eq(&self, other: &Self) -> bool {
+        for activity in &self.activities {
+            if !other.activities.contains(activity) {
+                return false;
+            }
+        }
+
+        for activity in &other.activities {
+            if !self.activities.contains(activity) {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl Eq for Schedule {}
 
 impl Activity {
     fn new_with_slots(name: &str, slots: Vec<&Slot>) -> Self {
@@ -69,8 +92,6 @@ impl Schedule {
         let mut activity_permutations = vec![];
         let mut activity_indexes = (0..activities.len()).collect::<Vec<usize>>();
         let index_permutations = permutations(&mut activity_indexes);
-
-        println!("Permutations {:?}", index_permutations);
 
         for index_permutation in index_permutations {
             let mut activity_permutation = vec![];
@@ -120,6 +141,7 @@ fn main() {
         Activity::new_with_slots("organizacao e rec da info", vec![&slots[2], &slots[7]]),
         Activity::new_with_slots("gerencia de projetos", vec![&slots[3], &slots[4]]),
         Activity::new_with_slots("Mat Fin", vec![&slots[8], &slots[9]]),
+        Activity::new_with_slots("PDS1", vec![&slots[8], &slots[5]]),
         // Activity::new_with_slots("resolucao", vec![&slots[10]]),
     ];
 
@@ -137,7 +159,35 @@ fn get_all_valid_schedules(
 ) -> Vec<Schedule> {
     let all_schedules = Schedule::get_possible_schedules(activities);
 
-    filter_valid_schedules(all_schedules, slots.to_vec(), num_of_activities)
+    let possible_schedules =
+        filter_valid_schedules(all_schedules, slots.to_vec(), num_of_activities);
+
+    let filtered_schedules = filter_identical_schedules(possible_schedules);
+
+    println!(
+        "So, finally, we got {} different schedules for you to choose",
+        filtered_schedules.len()
+    );
+
+    filtered_schedules
+}
+
+fn filter_identical_schedules(mut possible_schedules: Vec<Schedule>) -> Vec<Schedule> {
+    todo!();
+    // let schedules_length = possible_schedules.len();
+    // for i in 0..schedules_length {
+    //     let mut index_to_remove = vec![];
+    //     for j in i..schedules_length {
+    //         if possible_schedules.get(i) == possible_schedules.get(j) {
+    //             index_to_remove.push(j);
+    //         }
+    //     }
+    //     // possible_schedules.into_iter().filter(| | )
+    // }
+    // let mut set: HashSet<Schedule> = HashSet::new();
+    // possible_schedules.retain(|schedule| set.insert(schedule.clone()));
+
+    // possible_schedules
 }
 
 fn filter_valid_schedules(
@@ -218,7 +268,6 @@ mod tests {
         let slot = Slot::new("teste");
         let my_slot = Slot {
             name: "teste".into(),
-            state: SlotState::Free,
         };
         assert_eq!(slot.name, my_slot.name);
     }
