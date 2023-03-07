@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Debug, vec};
+use std::{fmt::Debug, vec};
 
 #[derive(Debug, Clone, Hash)]
 struct Slot {
@@ -88,15 +88,20 @@ impl Activity {
 }
 
 impl Schedule {
-    fn get_possible_schedules(activities: &[Activity]) -> Vec<Self> {
+    fn get_possible_schedules(activities: &[Activity], num_of_activities: i8) -> Vec<Self> {
         let mut activity_permutations = vec![];
         let mut activity_indexes = (0..activities.len()).collect::<Vec<usize>>();
         let index_permutations = permutations(&mut activity_indexes);
 
         for index_permutation in index_permutations {
             let mut activity_permutation = vec![];
+            let mut atv_count = 0;
             for activity_index in index_permutation {
                 activity_permutation.push(activities[activity_index].clone());
+                atv_count += 1;
+                if atv_count == num_of_activities {
+                    break;
+                }
             }
             activity_permutations.push(activity_permutation);
         }
@@ -108,6 +113,13 @@ impl Schedule {
         }
 
         all_schedules
+    }
+
+    fn pretty_print(&self) {
+        println!("--------------------------------");
+        for a in &self.activities {
+            println!("{}", a.name);
+        }
     }
 }
 
@@ -142,14 +154,10 @@ fn main() {
         Activity::new_with_slots("gerencia de projetos", vec![&slots[3], &slots[4]]),
         Activity::new_with_slots("Mat Fin", vec![&slots[8], &slots[9]]),
         Activity::new_with_slots("PDS1", vec![&slots[8], &slots[5]]),
-        // Activity::new_with_slots("resolucao", vec![&slots[10]]),
+        Activity::new_with_slots("resolucao", vec![&slots[10]]),
     ];
 
-    // let res = associate_slots_to_activities(slots.to_vec(), activities);
-
     let _res = get_all_valid_schedules(&activities, &slots, 4);
-
-    // println!("{:?}", res);
 }
 
 fn get_all_valid_schedules(
@@ -157,37 +165,58 @@ fn get_all_valid_schedules(
     slots: &[Slot],
     num_of_activities: i8,
 ) -> Vec<Schedule> {
-    let all_schedules = Schedule::get_possible_schedules(activities);
+    let possible_schedules = Schedule::get_possible_schedules(activities, num_of_activities);
 
-    let possible_schedules =
-        filter_valid_schedules(all_schedules, slots.to_vec(), num_of_activities);
+    println!("I hope at least here we had a 2 and 3");
+    for s in &possible_schedules {
+        s.pretty_print();
+    }
 
-    let filtered_schedules = filter_identical_schedules(possible_schedules);
+    let valid_schedules =
+        filter_valid_schedules(possible_schedules, slots.to_vec(), num_of_activities);
+
+    println!("Here we still had a 2 and 3");
+    for s in &valid_schedules {
+        s.pretty_print();
+    }
+
+    let filtered_schedules = filter_identical_schedules(valid_schedules);
 
     println!(
         "So, finally, we got {} different schedules for you to choose",
         filtered_schedules.len()
     );
 
+    for s in &filtered_schedules {
+        println!("Schedule: ");
+        for a in &s.activities {
+            println!("\t{}", a.name);
+        }
+    }
+
     filtered_schedules
 }
 
-fn filter_identical_schedules(mut possible_schedules: Vec<Schedule>) -> Vec<Schedule> {
-    todo!();
-    // let schedules_length = possible_schedules.len();
-    // for i in 0..schedules_length {
-    //     let mut index_to_remove = vec![];
-    //     for j in i..schedules_length {
-    //         if possible_schedules.get(i) == possible_schedules.get(j) {
-    //             index_to_remove.push(j);
-    //         }
-    //     }
-    //     // possible_schedules.into_iter().filter(| | )
-    // }
-    // let mut set: HashSet<Schedule> = HashSet::new();
-    // possible_schedules.retain(|schedule| set.insert(schedule.clone()));
+fn filter_identical_schedules(possible_schedules: Vec<Schedule>) -> Vec<Schedule> {
+    let mut aux_possible: Vec<Option<Schedule>> = possible_schedules
+        .iter()
+        .map(|schedule| Some(schedule.clone()))
+        .collect();
 
-    // possible_schedules
+    let schedules_length = possible_schedules.len();
+    for i in 0..schedules_length {
+        for j in i + 1..schedules_length {
+            if possible_schedules.get(i) == possible_schedules.get(j) {
+                aux_possible[i] = None;
+            }
+        }
+    }
+
+    aux_possible
+        .into_iter()
+        .filter(|schd| schd.is_some())
+        .map(|schd| schd.unwrap())
+        .collect()
 }
 
 fn filter_valid_schedules(
@@ -272,13 +301,17 @@ mod tests {
         assert_eq!(slot.name, my_slot.name);
     }
 
-    fn create_deault_slots() -> [Slot; 3] {
+    fn create_default_slots_with_equals() -> [Slot; 3] {
         [Slot::new("teste"), Slot::new("teste1"), Slot::new("teste1")]
+    }
+
+    fn create_default_slots() -> [Slot; 3] {
+        [Slot::new("teste"), Slot::new("teste1"), Slot::new("teste2")]
     }
 
     #[test]
     fn test_slot_equals() {
-        let slots = create_deault_slots();
+        let slots = create_default_slots_with_equals();
 
         assert_eq!(slots[1], slots[2]);
         assert_ne!(slots[0], slots[2]);
@@ -299,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_activity_can_be_allocated_in() {
-        let slots = create_deault_slots();
+        let slots = create_default_slots_with_equals();
         let new_slots = [Slot::new("um outro slot")];
 
         let atv = Activity::new_with_slots("teste", vec![&slots[0]]);
@@ -319,18 +352,108 @@ mod tests {
         assert!(perms.contains(&vec![3, 2, 1]));
     }
 
-    // #[test]
-    // fn test_schedule_get_possible_schedules() {
-    //     todo!()
-    // }
+    #[test]
+    fn test_equals_schedules() {
+        let activities = create_default_activities();
 
-    // #[test]
-    // fn test_filter_schedule_with_slots() {
-    //     todo!()
-    // }
+        let schdl1 = Schedule {
+            activities: vec![
+                activities.get(1).unwrap().clone(),
+                activities.get(0).unwrap().clone(),
+            ],
+        };
+        let schdl2 = Schedule {
+            activities: vec![
+                activities.get(1).unwrap().clone(),
+                activities.get(0).unwrap().clone(),
+            ],
+        };
+        let schdl3 = Schedule {
+            activities: vec![
+                activities.get(2).unwrap().clone(),
+                activities.get(1).unwrap().clone(),
+            ],
+        };
 
-    // #[test]
-    // fn test_get_all_schedules() {
-    //     todo!()
-    // }
+        assert_eq!(schdl1, schdl2);
+        assert_ne!(schdl1, schdl3);
+    }
+
+    fn create_default_activities() -> Vec<Activity> {
+        let slots = create_default_slots();
+
+        let mut activities = Vec::<Activity>::new();
+        activities.push(Activity {
+            name: "atv1".into(),
+            slots_to_use: vec![slots[0].clone()],
+        });
+        activities.push(Activity {
+            name: "atv2".into(),
+            slots_to_use: vec![slots[2].clone()],
+        });
+        activities.push(Activity {
+            name: "atv3".into(),
+            slots_to_use: vec![slots[1].clone()],
+        });
+
+        activities
+    }
+
+    #[test]
+    fn test_schedule_get_possible_schedules() {
+        let atvs = create_default_activities();
+
+        let schedules = Schedule::get_possible_schedules(&atvs, 2);
+
+        assert!(schedules.contains(&Schedule {
+            activities: vec![atvs.get(0).unwrap().clone(), atvs.get(1).unwrap().clone(),]
+        }));
+        assert!(schedules.contains(&Schedule {
+            activities: vec![atvs.get(1).unwrap().clone(), atvs.get(2).unwrap().clone(),]
+        }));
+    }
+
+    #[test]
+    fn test_filter_schedule_with_slots() {
+        let atvs = create_default_activities();
+        let slots = create_default_slots();
+
+        let schd = Schedule {
+            activities: vec![atvs[0].clone()],
+        };
+
+        assert!(!filter_schedule_with_slots(
+            &schd,
+            vec![slots[1].clone()],
+            1
+        ));
+        assert!(filter_schedule_with_slots(&schd, vec![slots[0].clone()], 1))
+    }
+
+    #[test]
+    fn test_get_all_schedules() {
+        let activities = create_default_activities();
+        let slots = create_default_slots();
+
+        let possible_schedules = get_all_valid_schedules(&activities, &slots, 2);
+
+        assert!(possible_schedules.contains(&Schedule {
+            activities: vec![
+                activities.get(0).unwrap().clone(),
+                activities.get(2).unwrap().clone(),
+            ],
+        }));
+        assert!(possible_schedules.contains(&Schedule {
+            activities: vec![
+                activities.get(0).unwrap().clone(),
+                activities.get(1).unwrap().clone(),
+            ],
+        }));
+        assert!(possible_schedules.contains(&Schedule {
+            activities: vec![
+                activities.get(1).unwrap().clone(),
+                activities.get(2).unwrap().clone(),
+            ],
+        }));
+    }
 }
