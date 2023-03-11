@@ -1,6 +1,6 @@
 mod scheduler;
 
-use scheduler::{get_all_valid_schedules, Activity, Slot};
+use scheduler::{Activity, Schedule, Slot};
 
 fn main() {
     let slots = [
@@ -26,7 +26,7 @@ fn main() {
         Activity::new_with_slots("resolucao", vec![&slots[10]]),
     ];
 
-    let res = get_all_valid_schedules(&activities, &slots, 4);
+    let res = Schedule::get_all_valid_schedules(&activities, &slots, 4);
 
     println!("{:?}", res.len());
 }

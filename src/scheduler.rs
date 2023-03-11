@@ -162,6 +162,43 @@ impl Schedule {
 
         all_schedules
     }
+
+    pub fn get_all_valid_schedules(
+        activities: &[Activity],
+        slots: &[Slot],
+        num_of_activities: i8,
+    ) -> Vec<Self> {
+        let possible_schedules = Self::get_possible_schedules(activities, num_of_activities);
+
+        let valid_schedules =
+            Self::filter_valid_schedules(possible_schedules, &slots.to_vec(), num_of_activities);
+
+        Self::filter_identical_schedules(valid_schedules)
+    }
+
+    fn filter_valid_schedules(
+        all_schedules: Vec<Schedule>,
+        slots: &Vec<Slot>,
+        num_of_activities: i8,
+    ) -> Vec<Schedule> {
+        let mut result_schedules = Vec::new();
+        for schedule in all_schedules {
+            let new_slots = slots.clone();
+            if filter_schedule_with_slots(&schedule, new_slots, num_of_activities) {
+                result_schedules.push(schedule);
+            }
+        }
+
+        result_schedules
+    }
+
+    fn filter_identical_schedules(possible_schedules: Vec<Self>) -> Vec<Self> {
+        possible_schedules
+            .into_iter()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect()
+    }
 }
 
 impl std::fmt::Display for Schedule {
@@ -172,43 +209,6 @@ impl std::fmt::Display for Schedule {
         }
         Ok(())
     }
-}
-
-pub fn get_all_valid_schedules(
-    activities: &[Activity],
-    slots: &[Slot],
-    num_of_activities: i8,
-) -> Vec<Schedule> {
-    let possible_schedules = Schedule::get_possible_schedules(activities, num_of_activities);
-
-    let valid_schedules =
-        filter_valid_schedules(possible_schedules, &slots.to_vec(), num_of_activities);
-
-    filter_identical_schedules(valid_schedules)
-}
-
-fn filter_identical_schedules(possible_schedules: Vec<Schedule>) -> Vec<Schedule> {
-    possible_schedules
-        .into_iter()
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect()
-}
-
-fn filter_valid_schedules(
-    all_schedules: Vec<Schedule>,
-    slots: &Vec<Slot>,
-    num_of_activities: i8,
-) -> Vec<Schedule> {
-    let mut result_schedules = Vec::new();
-    for schedule in all_schedules {
-        let new_slots = slots.clone();
-        if filter_schedule_with_slots(&schedule, new_slots, num_of_activities) {
-            result_schedules.push(schedule);
-        }
-    }
-
-    result_schedules
 }
 
 fn filter_schedule_with_slots(
@@ -424,7 +424,7 @@ mod tests {
         let activities = create_default_activities();
         let slots = create_default_slots();
 
-        let possible_schedules = get_all_valid_schedules(&activities, &slots, 2);
+        let possible_schedules = Schedule::get_all_valid_schedules(&activities, &slots, 2);
 
         assert!(possible_schedules.contains(&Schedule {
             activities: vec![
