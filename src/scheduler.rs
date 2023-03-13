@@ -170,21 +170,16 @@ impl Schedule {
     ) -> Vec<Self> {
         let possible_schedules = Self::get_possible_schedules(activities, num_of_activities);
 
-        let valid_schedules =
-            Self::filter_valid_schedules(possible_schedules, &slots.to_vec(), num_of_activities);
+        let valid_schedules = Self::filter_valid_schedules(possible_schedules, slots);
 
         Self::filter_identical_schedules(valid_schedules)
     }
 
-    fn filter_valid_schedules(
-        all_schedules: Vec<Schedule>,
-        slots: &Vec<Slot>,
-        num_of_activities: i8,
-    ) -> Vec<Schedule> {
+    fn filter_valid_schedules(all_schedules: Vec<Schedule>, slots: &[Slot]) -> Vec<Schedule> {
         let mut result_schedules = Vec::new();
         for schedule in all_schedules {
-            let new_slots = slots.clone();
-            if filter_schedule_with_slots(&schedule, new_slots, num_of_activities) {
+            let new_slots = slots.to_owned();
+            if filter_schedule_with_slots(&schedule, new_slots) {
                 result_schedules.push(schedule);
             }
         }
@@ -211,16 +206,8 @@ impl std::fmt::Display for Schedule {
     }
 }
 
-fn filter_schedule_with_slots(
-    schedule: &Schedule,
-    mut slots: Vec<Slot>,
-    mut num_of_activities: i8,
-) -> bool {
+fn filter_schedule_with_slots(schedule: &Schedule, mut slots: Vec<Slot>) -> bool {
     for activity in &schedule.activities {
-        if num_of_activities == 0 {
-            return true;
-        }
-
         let size_before = slots.len();
 
         if activity.can_be_allocated_in(&slots) {
@@ -236,8 +223,6 @@ fn filter_schedule_with_slots(
         if slots.len() == size_before {
             return false;
         }
-
-        num_of_activities -= 1;
     }
 
     true
@@ -267,6 +252,40 @@ mod tests {
 
     use super::*;
 
+    fn create_default_activities() -> Vec<Activity> {
+        let slots = create_default_slots();
+
+        let mut activities = Vec::<Activity>::new();
+        activities.push(Activity {
+            name: "atv1".into(),
+            slots_to_use: vec![slots[0].clone()],
+        });
+        activities.push(Activity {
+            name: "atv2".into(),
+            slots_to_use: vec![slots[2].clone()],
+        });
+        activities.push(Activity {
+            name: "atv3".into(),
+            slots_to_use: vec![slots[1].clone()],
+        });
+
+        activities
+    }
+
+    fn create_equal_activities() -> [Activity; 2] {
+        let slots = create_default_slots();
+
+        [
+            Activity {
+                name: "atv1".into(),
+                slots_to_use: vec![slots[1].clone(), slots[0].clone()],
+            },
+            Activity {
+                name: "atv1".into(),
+                slots_to_use: vec![slots[0].clone(), slots[1].clone()],
+            },
+        ]
+    }
     #[test]
     fn test_create_slot() {
         let slot = Slot::new("teste");
@@ -353,41 +372,6 @@ mod tests {
         assert_ne!(schdl1, schdl3);
     }
 
-    fn create_default_activities() -> Vec<Activity> {
-        let slots = create_default_slots();
-
-        let mut activities = Vec::<Activity>::new();
-        activities.push(Activity {
-            name: "atv1".into(),
-            slots_to_use: vec![slots[0].clone()],
-        });
-        activities.push(Activity {
-            name: "atv2".into(),
-            slots_to_use: vec![slots[2].clone()],
-        });
-        activities.push(Activity {
-            name: "atv3".into(),
-            slots_to_use: vec![slots[1].clone()],
-        });
-
-        activities
-    }
-
-    fn create_equal_activities() -> [Activity; 2] {
-        let slots = create_default_slots();
-
-        [
-            Activity {
-                name: "atv1".into(),
-                slots_to_use: vec![slots[1].clone(), slots[0].clone()],
-            },
-            Activity {
-                name: "atv1".into(),
-                slots_to_use: vec![slots[0].clone(), slots[1].clone()],
-            },
-        ]
-    }
-
     #[test]
     fn test_schedule_get_possible_schedules() {
         let atvs = create_default_activities();
@@ -411,12 +395,8 @@ mod tests {
             activities: vec![atvs[0].clone()],
         };
 
-        assert!(!filter_schedule_with_slots(
-            &schd,
-            vec![slots[1].clone()],
-            1
-        ));
-        assert!(filter_schedule_with_slots(&schd, vec![slots[0].clone()], 1))
+        assert!(!filter_schedule_with_slots(&schd, vec![slots[1].clone()],));
+        assert!(filter_schedule_with_slots(&schd, vec![slots[0].clone()]))
     }
 
     #[test]
