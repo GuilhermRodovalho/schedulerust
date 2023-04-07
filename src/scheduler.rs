@@ -4,13 +4,13 @@ use std::{fmt::Debug, vec};
 
 #[derive(Debug, Clone)]
 pub struct Slot {
-    name: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct Activity {
-    name: String,
-    slots_to_use: Vec<Slot>,
+    pub name: String,
+    pub slots_to_use: Vec<Slot>,
 }
 
 #[derive(Debug, Clone)]
@@ -136,7 +136,7 @@ impl Activity {
 }
 
 impl Schedule {
-    fn get_possible_schedules(activities: &[Activity], num_of_activities: i8) -> Vec<Self> {
+    fn get_possible_schedules(activities: &[Activity], num_of_activities: u8) -> Vec<Self> {
         let mut activity_permutations = vec![];
         let mut activity_indexes = (0..activities.len()).collect::<Vec<usize>>();
         let index_permutations = permutations(&mut activity_indexes);
@@ -163,10 +163,11 @@ impl Schedule {
         all_schedules
     }
 
+    /// Get all valid schedules for the given activities and slots with the given number of activities
     pub fn get_all_valid_schedules(
         activities: &[Activity],
         slots: &[Slot],
-        num_of_activities: i8,
+        num_of_activities: u8,
     ) -> Vec<Self> {
         let possible_schedules = Self::get_possible_schedules(activities, num_of_activities);
 
@@ -175,6 +176,7 @@ impl Schedule {
         Self::filter_identical_schedules(valid_schedules)
     }
 
+    /// Filter out schedules that cannot be allocated in the given slots
     fn filter_valid_schedules(all_schedules: Vec<Schedule>, slots: &[Slot]) -> Vec<Schedule> {
         let mut result_schedules = Vec::new();
         for schedule in all_schedules {
@@ -187,6 +189,7 @@ impl Schedule {
         result_schedules
     }
 
+    /// Filter out identical schedules by using a HashSet to remove duplicates
     fn filter_identical_schedules(possible_schedules: Vec<Self>) -> Vec<Self> {
         possible_schedules
             .into_iter()
@@ -200,7 +203,7 @@ impl std::fmt::Display for Schedule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Schedule")?;
         for activity in &self.activities {
-            writeln!(f, "\t{}\n", activity.name)?;
+            writeln!(f, "\t{}", activity.name)?;
         }
         Ok(())
     }
