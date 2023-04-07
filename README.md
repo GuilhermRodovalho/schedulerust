@@ -14,5 +14,6 @@ so I could choose which one I would choose.
 
 ## todo!()
 
-- [ ] Create user interface
+- [x] Create user interface
+- [ ] rewrite the terrible algorithm for generating combinations
 - [ ] Add option for create schedules without a specified amount of activites the user wants to attend
