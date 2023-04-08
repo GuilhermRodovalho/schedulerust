@@ -16,6 +16,8 @@ enum Choice {
 }
 
 fn main() {
+    clear_screen();
+
     println!("{}", get_name_text());
 
     print_intro_message();
@@ -28,10 +30,10 @@ fn main() {
 
         match input {
             Choice::Slot => {
-                slots.append(&mut input_slots());
+                input_slots(&mut slots);
             }
             Choice::Activity => {
-                activities.append(&mut input_activities(&slots));
+                input_activities(&slots, &mut activities);
             }
             Choice::Schedules => {
                 let schedules = get_schedules(&activities, &slots);
@@ -78,16 +80,14 @@ fn print_schedules(schedules: &Vec<Schedule>) {
     read_str();
 }
 
-fn input_activities(slots: &Vec<Slot>) -> Vec<Activity> {
+fn input_activities(slots: &Vec<Slot>, activities: &mut Vec<Activity>) {
     clear_screen();
     if slots.is_empty() {
         println!("You need to input slots first!");
         println!("Press enter to continue");
         read_str();
-        return Vec::<Activity>::new();
     }
     println!("Activities input!");
-    let mut activities = Vec::<Activity>::new();
 
     loop {
         clear_screen();
@@ -126,15 +126,11 @@ fn input_activities(slots: &Vec<Slot>) -> Vec<Activity> {
         let activity = Activity::new_with_slots(activity_name.as_str(), chosen_slots);
         activities.push(activity);
     }
-
-    activities
 }
 
 /// Get user input for slots
-fn input_slots() -> Vec<Slot> {
+fn input_slots(slots: &mut Vec<Slot>) {
     println!("Slots input");
-
-    let mut slots = Vec::<Slot>::new();
 
     loop {
         clear_screen();
@@ -152,8 +148,6 @@ fn input_slots() -> Vec<Slot> {
         let slot = Slot::new(name.as_str());
         slots.push(slot);
     }
-
-    slots
 }
 
 fn print_slots(label: &str, slots: &[Slot]) {
@@ -196,6 +190,10 @@ fn get_name_text() -> &'static str {
 
 fn print_intro_message() {
     println!("Welcome to schedulerust!");
+    println!("This is a program that will help you to find the best schedule for you");
+    println!("It will find all the possible schedules that you can have, and then you can choose the best one");
+    println!();
+    println!("Usage:");
     println!(
         "To use schedulerust you'll need to insert all your slots and activities, respectively"
     );
