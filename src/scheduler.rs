@@ -64,13 +64,13 @@ impl Eq for Activity {}
 impl Hash for Activity {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
-        // let mut names = Vec::new();
-        // for slot in &self.slots_to_use {
-        //     names.push(slot.name.clone());
-        // }
-        // names.sort();
+        let mut names = Vec::new();
+        for slot in &self.slots_to_use {
+            names.push(slot.name.clone());
+        }
+        names.sort();
 
-        // names.hash(state);
+        names.hash(state);
     }
 }
 
