@@ -1,6 +1,7 @@
+use itertools::Itertools;
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::hash::Hash;
-use std::{fmt::Debug, vec};
 
 #[derive(Debug, Clone)]
 pub struct Slot {
@@ -63,13 +64,13 @@ impl Eq for Activity {}
 impl Hash for Activity {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
-        let mut names = Vec::new();
-        for slot in &self.slots_to_use {
-            names.push(slot.name.clone());
-        }
-        names.sort();
+        // let mut names = Vec::new();
+        // for slot in &self.slots_to_use {
+        //     names.push(slot.name.clone());
+        // }
+        // names.sort();
 
-        names.hash(state);
+        // names.hash(state);
     }
 }
 
@@ -137,28 +138,14 @@ impl Activity {
 
 impl Schedule {
     fn get_possible_schedules(activities: &[Activity], num_of_activities: u8) -> Vec<Self> {
-        let mut activity_permutations = vec![];
-        let mut activity_indexes = (0..activities.len()).collect::<Vec<usize>>();
-        let index_permutations = permutations(&mut activity_indexes);
+        let activity_permutations = activities.iter().permutations(num_of_activities as usize);
 
-        for index_permutation in index_permutations {
-            let mut activity_permutation = vec![];
-            let mut atv_count = 0;
-            for activity_index in index_permutation {
-                activity_permutation.push(activities[activity_index].clone());
-                atv_count += 1;
-                if atv_count == num_of_activities {
-                    break;
-                }
-            }
-            activity_permutations.push(activity_permutation);
-        }
-        let mut all_schedules: Vec<Self> = Vec::new();
-
-        for activities in activity_permutations {
-            let schedule = Self { activities };
-            all_schedules.push(schedule);
-        }
+        let all_schedules: Vec<Self> = activity_permutations
+            .map(|permutation| {
+                let activities: Vec<Activity> = permutation.into_iter().cloned().collect();
+                Schedule { activities }
+            })
+            .collect();
 
         all_schedules
     }
@@ -178,24 +165,24 @@ impl Schedule {
 
     /// Filter out schedules that cannot be allocated in the given slots
     fn filter_valid_schedules(all_schedules: Vec<Schedule>, slots: &[Slot]) -> Vec<Schedule> {
-        let mut result_schedules = Vec::new();
-        for schedule in all_schedules {
-            let new_slots = slots.to_owned();
-            if filter_schedule_with_slots(&schedule, new_slots) {
-                result_schedules.push(schedule);
-            }
-        }
+        let result_schedules = all_schedules
+            .into_iter()
+            .filter(|schedule| {
+                let mut slots = slots.to_owned();
+                filter_schedule_with_slots(schedule, &mut slots)
+            })
+            .collect();
 
         result_schedules
     }
 
     /// Filter out identical schedules by using a HashSet to remove duplicates
     fn filter_identical_schedules(possible_schedules: Vec<Self>) -> Vec<Self> {
-        possible_schedules
-            .into_iter()
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect()
+        let mut unique_schedules: HashSet<Self> = HashSet::new();
+        for schedule in possible_schedules {
+            unique_schedules.insert(schedule);
+        }
+        unique_schedules.into_iter().collect()
     }
 }
 
@@ -209,7 +196,7 @@ impl std::fmt::Display for Schedule {
     }
 }
 
-fn filter_schedule_with_slots(schedule: &Schedule, mut slots: Vec<Slot>) -> bool {
+fn filter_schedule_with_slots(schedule: &Schedule, slots: &mut Vec<Slot>) -> bool {
     for activity in &schedule.activities {
         let size_before = slots.len();
 
@@ -229,24 +216,6 @@ fn filter_schedule_with_slots(schedule: &Schedule, mut slots: Vec<Slot>) -> bool
     }
 
     true
-}
-
-fn permutations(items: &mut Vec<usize>) -> Vec<Vec<usize>> {
-    if items.is_empty() {
-        vec![vec![]]
-    } else {
-        let mut result = vec![];
-        for i in 0..items.len() {
-            let item = items.remove(i);
-            let sub_permutations = permutations(items);
-            for mut perm in sub_permutations {
-                perm.insert(0, item);
-                result.push(perm);
-            }
-            items.insert(i, item);
-        }
-        result
-    }
 }
 
 #[cfg(test)]
@@ -338,17 +307,6 @@ mod tests {
     }
 
     #[test]
-    fn test_permutations() {
-        let mut nums: Vec<usize> = vec![1, 2, 3];
-
-        let perms = permutations(&mut nums);
-        assert!(perms.contains(&vec![2, 1, 3]));
-        assert!(perms.contains(&vec![3, 1, 2]));
-        assert!(perms.contains(&vec![1, 3, 2]));
-        assert!(perms.contains(&vec![3, 2, 1]));
-    }
-
-    #[test]
     fn test_equals_schedules() {
         let activities = create_default_activities();
 
@@ -398,8 +356,11 @@ mod tests {
             activities: vec![atvs[0].clone()],
         };
 
-        assert!(!filter_schedule_with_slots(&schd, vec![slots[1].clone()],));
-        assert!(filter_schedule_with_slots(&schd, vec![slots[0].clone()]))
+        let mut slots1 = vec![slots[1].clone()];
+        assert!(!filter_schedule_with_slots(&schd, &mut slots1));
+
+        let mut slots2 = vec![slots[0].clone()];
+        assert!(filter_schedule_with_slots(&schd, &mut slots2));
     }
 
     #[test]
